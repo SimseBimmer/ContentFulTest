@@ -1,43 +1,77 @@
-import { useState } from 'react';
-import './App.scss';
-import { Header } from './components/header/header';
-import { Footer } from './components/footer/footer';
-import { NavBar } from './components/NavBar/NavBar';
-import { Hilsen } from './components/Hilsen/Hilsen';
-import { Liste } from './components/Liste/Liste';
-import { Button } from './components/Button/Button';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { HomePage } from './pages/HomePage/HomePage';
-import { ConceptsPage } from './pages/ConceptsPage/ConceptsPage';
-import { AboutPage } from './pages/AboutPage/AboutPage';
-import { ErrorPage } from './pages/ErrorPage/ErrorPage';
-import { ContactPage } from './pages/ContactPage/ContactPage';
+import { useEffect, useState } from "react";
+import "./App.scss";
+import * as contentful from "contentful";
+import { documentToReactComponents } from "@contentful/rich-text-react-renderer";
 
 function App() {
+  const [data, setData] = useState(null);
+  const [scrolled, setScrolled] = useState(false);
+
+  const client = contentful.createClient({
+    space: import.meta.env.VITE_PUBLIC_SPACE_ID,
+    accessToken: import.meta.env.VITE_PUBLIC_ACCESTOKEN,
+  });
+
+  useEffect(() => {
+    client
+      .getEntries()
+      .then((res) => setData(res))
+      .catch((err) => console.error("Error fetching data:", err));
+
+    const handleScroll = () => {
+      if (window.scrollY > 100) {
+        setScrolled(true); // Når du scroller mere end 100px ned
+      } else {
+        setScrolled(false);
+      }
+    };
+
+    window.addEventListener("scroll", handleScroll);
+
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+    };
+  }, []);
 
   return (
     <>
-      <BrowserRouter>
-        <Header />
-          {<NavBar />}
-          <main>
-            <Routes>
-              <Route index element={<HomePage />}/>
-              <Route path="/Koncepter" element={<ConceptsPage />}/>
-              <Route path="/about" element={<AboutPage />}/>
-              <Route path="*" element={<ErrorPage />}/>
-              <Route path="/kontaktOs" element={<ContactPage />}/>
+      {data?.items?.map((item) => (
+        <div key={item.sys.id}>
+          <header id="globalHeader">
+            <img id="HeaderImage" src={item.fields.headerImage.fields.file.url} />
+            <div id="absiluteText">
+              <div id="flex">
+                <img src="/images/Kunst.png" alt="Kunst Logo" />
+                <h1>{item.fields.title}</h1>
+              </div>
+              <h2>{item.fields.headerText}</h2>
+            </div>
+          </header>
 
-
-            </Routes>
-
-
-            <Hilsen navn="Mette" />
-            {/* <Liste titel="Mine Livretter" items={livretter} /> */}
-
+          <main id="globalMain">
+            {/* om os */}
+            <header id="MainHeader">
+              <h2>Om os</h2>
+              <img src="/images/Kunst.png" alt="Kunst Logo" />
+            </header>
+            <main id="descriptionContainer">
+              <div id="borderRadiusContainer">
+                <div>
+                  <p id="descriptionText">{item.fields.description}</p>
+                  <p id="descriptionText">{item.fields.descriptionTwo}</p>
+                  <p id="descriptionText">{item.fields.descriptionThree}</p>
+                </div>
+                <div id="mainImageContainer">
+                  <img id="mainImage" src={item.fields.mainImage.fields.file.url} />
+                </div>
+              </div>
+            </main>
+            {/* Galleri */}
           </main>
-        {/* <Footer /> */}
-      </BrowserRouter>
+
+          {item.fields.text && documentToReactComponents(item.fields.text)}
+        </div>
+      ))}
     </>
   );
 }
